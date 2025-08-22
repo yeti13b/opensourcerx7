@@ -30,7 +30,7 @@
 .PARAMETER exportCSV
     The path to export the profile CSV file.
 .EXAMPLE
-    .\bellow_new.ps1 -top_radius 10 -bottom_radius 50 -total_height 120 -offset 15 -min_step_height 5 -decimals 2 -amplitudeFactor 0.8 -ascii -exportSCAD ".\bellow.scad" -exportCSV ".\bellow_profile.csv"
+    .\generateBellow.ps1 -top_radius 10 -bottom_radius 50 -total_height 120 -offset 15 -min_step_height 5 -decimals 2 -amplitudeFactor 0.8 -ascii -exportSCAD ".\bellow.scad" -exportCSV ".\bellow_profile.csv"
     Generates a bellow profile with specified parameters, displays an ASCII sketch, and exports the SCAD code and profile CSV. 
 .NOTES
     Written by Yeti13b
