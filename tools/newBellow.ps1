@@ -7,22 +7,51 @@
      and bottom radius, total height, offset, minimum step height, and amplitude factor for the corrugation
      steepness. It can output the profile in ASCII format, generate SCAD code for 3D modeling, and export the
      profile to a CSV file.
+.PARAMETER top_radius
+    The top radius of the bellow.
+.PARAMETER bottom_radius
+    The bottom radius of the bellow.
+.PARAMETER min_bellow_radius
+    The minimum radius for the bellow to avoid collapse.
+.PARAMETER total_height
+    The overall height of the bellow.
+.PARAMETER offset
+    The flat height at the bottom and top of the bellow.
+.PARAMETER min_step_height
+    The minimum height for each corrugation step.
+.PARAMETER decimals
+    The number of decimal places for output rounding.
+.PARAMETER amplitudeFactor
+    The amplitude factor for corrugation steepness (1.0 = about 45° slopes).
+.PARAMETER ascii
+    A switch to show an ASCII sketch of the bellow profile. 
+.PARAMETER exportSCAD
+    The path to export the generated SCAD code.
+.PARAMETER exportCSV
+    The path to export the profile CSV file.
+.EXAMPLE
+    .\bellow_new.ps1 -top_radius 10 -bottom_radius 50 -total_height 120 -offset 15 -min_step_height 5 -decimals 2 -amplitudeFactor 0.8 -ascii -exportSCAD ".\bellow.scad" -exportCSV ".\bellow_profile.csv"
+    Generates a bellow profile with specified parameters, displays an ASCII sketch, and exports the SCAD code and profile CSV. 
+.NOTES
+    Written by Yeti13b
+    https://github.com/yeti13b
 #>
 
 param (
     [double]$top_radius = 7.5,          # Top radius of the bellow
     [double]$bottom_radius = 60.5,      # Bottom radius of the bellow
+    [double]$min_bellow_radius = $top_radius, # Minimum radius for the bellow
     [double]$total_height = 150,        # Overall height of the bellow
     [double]$offset = 10,               # Flat height at bottom and top
     [double]$min_step_height = 7,       # Minimum height for each corrugation step
     [int]$decimals = 2,                 # Decimal places for output rounding
     [double]$amplitudeFactor = .6,     # Amplitude factor for corrugation steepness (1.0 = about 45° slopes) .6 is my favorite
     [switch]$ascii,                     # Switch to show ASCII sketch
-    [switch]$scad,                      # Switch to generate SCAD code
-    [string]$exportSCAD = ".\bellow_profile.scad",  # Path to export SCAD cod
+    [string]$exportSCAD,              # Path to export SCAD cod
     [string]$exportCSV = ".\bellow_profile.csv"  # Path to export the profile CSV
 )
 
+#region Functions
 function New-BellowProfile {
     [CmdletBinding()]
     param (
@@ -32,7 +61,8 @@ function New-BellowProfile {
         [double]$offset,               # Flat height at bottom and top
         [double]$min_step_height,       # Minimum height for each corrugation step
         [int]$decimals,                 # Decimal places for output rounding
-        [double]$amplitudeFactor      # Amplitude factor for corrugation steepness (1.0 = about 45° slopes) .6 is my favorite
+        [double]$amplitudeFactor,      # Amplitude factor for corrugation steepness (1.0 = about 45° slopes) .6 is my favorite
+        [double]$min_bellow_radius # Minimum radius for the bellow to avoid collapse
     )
 
     Write-Verbose "Generating bellow profile with parameters:"
@@ -43,16 +73,27 @@ function New-BellowProfile {
     Write-Verbose "  Min Step Height: $min_step_height"
     Write-Verbose "  Decimals: $decimals"
     Write-Verbose "  Amplitude Factor: $amplitudeFactor"
+    Write-Verbose "  Min Bellow Radius: $min_bellow_radius"
 
-    # === Validation ===
+    # Tests
+    if ($top_radius -le 0) { throw "top_radius must be > 0." }
     if ($total_height - 2 * $offset -le 0) { throw "total_height must be > 2*offset." }
     if ($bottom_radius -le $top_radius) { throw "bottom_radius must be > top_radius." }
+    if ($bottom_radius -le 0) { throw "bottom_radius must be > 0." }
+    if ($min_bellow_radius -gt $top_radius) { Write-Warning "Currently, if min_bellow_radius is > top_radius, top_radius will equal min_bellow_radius." }
+    if ($min_bellow_radius -lt 0) { throw "min_bellow_radius must be >= 0." }
+    if ($decimals -lt 0) { throw "decimals must be >= 0." } 
+    if ($decimals -gt 3) { throw "decimals must be <= 3." }
+    if ($offset -le 2) { throw "offset must be > 2." }
+    if ($min_step_height -le 0) { throw "min_step_height must be > 0." }
+    if ($amplitudeFactor -le 0) { throw "amplitudeFactor must be > 0." }
+    if ($amplitudeFactor -gt 1.4) { Write-Warning "Amplitude factor > 1 will result in steeper slopes." }
+    if ($amplitudeFactor -lt .6) { Write-Warning "Amplitude factor < 1 will result in shallow slopes." }
 
-    # === Derived spans ===
+    # Derived spans
     $usable_height = [double]($total_height - 2 * $offset)
-    $usable_radius = [double]($bottom_radius - $top_radius)
+    $usable_radius = [double]($bottom_radius - $min_bellow_radius)
     if ($usable_height -le 0) { throw "total_height must be > 2*offset." }
-    if ($bottom_radius -le $top_radius) { throw "bottom_radius must be > top_radius." }
 
     # Half-step count (force odd so we END on a Shrink)
     $M = [int][math]::Floor($usable_height / $min_step_height)
@@ -68,7 +109,7 @@ function New-BellowProfile {
     # === Build profile points ===
     $private:points = @()
     function Add-Point([string]$Step, [double]$Radius, [double]$Height) {
-        if ($Radius -lt $top_radius) { $Radius = $top_radius }
+        if ($Radius -lt $min_bellow_radius) { $Radius = $min_bellow_radius }
         if ($Radius -gt $bottom_radius) { $Radius = $bottom_radius }
         $private:points += [PSCustomObject]@{
             Radius = [math]::Round($Radius, $decimals)
@@ -98,7 +139,7 @@ function New-BellowProfile {
         # odd k => Shrink (inward), even k => Grow (outward)
         if ($k % 2 -eq 1) {
             $r = $baseline - $amplitude
-            if ($r -le $top_radius + 1e-9) {
+            if ($r -le $min_bellow_radius + 1e-9) {
                 # Land on top radius and stop — we still end on a Shrink as desired
                 Add-Point ("Shrink#{0}" -f [int][math]::Ceiling($k / 2)) $top_radius $h
                 $stopped = $true
@@ -118,8 +159,8 @@ function New-BellowProfile {
     if (-not $stopped -and $private:points[-1].Height -gt $topFlatH) { $topFlatH = $private:points[-1].Height }
     Add-Point "TopFlat" $top_radius $topFlatH
     Add-Point "TopEnd"  $top_radius $total_height
-
-    return $private:points
+    
+    return $private:points 
 }
 function Export-BellowProfile {
     [CmdletBinding()]
@@ -140,17 +181,16 @@ function Show-AsciiSketch {
     param (
         [array]$points
     )
+    $asciiPoints = $points | Sort-Object Height
+    Write-Host "`nBellow Profile (top to bottom):`n"
 
-    [array]::Reverse($points) # flips back to bottom-to-top for drawing
-    Write-Host "`nASCII sketch (top to bottom):`n"
-
-    $maxR = ($points | Measure-Object Radius -Maximum).Maximum
+    $maxR = ($asciiPoints | Measure-Object Radius -Maximum).Maximum
     $center = [int][math]::Ceiling($maxR) + 2
 
     # Scale rows directly to vertical height between successive points
-    for ($pIndex = $points.Count - 1; $pIndex -gt 0; $pIndex--) {
-        $p1 = $points[$pIndex]
-        $p2 = $points[$pIndex - 1]
+    for ($pIndex = $asciiPoints.Count - 1; $pIndex -gt 0; $pIndex--) {
+        $p1 = $asciiPoints[$pIndex]
+        $p2 = $asciiPoints[$pIndex - 1]
 
         $rows = [int][math]::Max(1, [math]::Round($p2.Height - $p1.Height))
         $r = [int][math]::Round($p1.Radius)
@@ -163,7 +203,7 @@ function Show-AsciiSketch {
         }
     }
 }
-function Create-ScadCode {
+function New-ScadCode {
     [CmdletBinding()]
     param (
         [array]$points,
@@ -236,20 +276,33 @@ bellows();
 //translate ([3*intRadiusBot,0,0]) bellows(270);  
 "@
 
-    Set-Content -Path $exportPath -Value $scadCode
-}
 
+    If (-not (Test-Path -Path $exportPath)) {
+        New-Item -Path $exportPath -ItemType File | Out-Null
+        $fullpath = Resolve-Path -Path $exportPath
+    }
+    else {
+        throw "File $exportPath already exists. Please delete or choose a different path."
+    }
+    Set-Content -Path $fullpath -Value $scadCode
+    Write-Host "SCAD code exported to $fullpath"
+}
+#endregion
+
+#region Main Script Execution
 $bellow_points = New-BellowProfile -top_radius $top_radius `
     -bottom_radius $bottom_radius `
     -total_height $total_height `
     -offset $offset `
     -min_step_height $min_step_height `
     -decimals $decimals `
-    -amplitudeFactor $amplitudeFactor
+    -amplitudeFactor $amplitudeFactor `
+    -min_bellow_radius $min_bellow_radius
 
 [array]::Reverse($bellow_points) # flips the table to show from top to bottom
+#endregion
 
-                 
+#region Outputs                
 if ($bellow_points) {
     # Output the profile points
     Write-Host "`nProfile Points (Top to Bottom):"
@@ -265,11 +318,12 @@ if ($bellow_points) {
         Export-BellowProfile -points $bellow_points -exportPath $exportCSV 
     }
     # Generate SCAD code
-    if ($scad) {
+    if ($exportSCAD) {
         $scad_points = $bellow_points | ForEach-Object { Write-Output "[$($_.radius), $($_.Height)]," }
-        Create-ScadCode -points $scad_points -top_radius $top_radius -bottom_radius $bottom_radius -total_height $total_height -exportPath $exportSCAD
+        New-ScadCode -points $scad_points -top_radius $top_radius -bottom_radius $bottom_radius -total_height $total_height -exportPath $exportSCAD
     }
 }
 else {
     Write-Error "No points generated for the bellow profile."
 }
+#endregion
