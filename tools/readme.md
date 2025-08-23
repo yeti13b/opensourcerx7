@@ -8,6 +8,6 @@ This is a Powershell script that generates bellows for openSCAD. Afterwhich, you
 
 Usage is well-documented at the beginning of the script.
 
-![.\generateBellows.ps1 -top_radius 7.5 -bottom_radius 60.5 -total_height 130 -offset 10 -min_step_height 7 -decimals 2 -amplitudeFactor .6 -min_bellow_radius 7.5 -exportSCAD ./shifter_bellowscls.scad -asci](/tools/generateBellows.png)
+![.\generateBellows.ps1 -top_radius 7.5 -bottom_radius 60.5 -total_height 130 -offset 10 -min_step_height 7 -decimals 2 -amplitudeFactor .6 -min_bellow_radius 7.5 -exportSCAD ./shifter_bellowscls.scad -asci](generateBellows.png)
 
 <hr>
