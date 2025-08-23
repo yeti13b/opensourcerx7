@@ -168,13 +168,24 @@ function Export-BellowProfile {
         [array]$points,
         [string]$exportPath
     )
+    $fullpath = Join-Path -Path (Get-Location) -ChildPath $exportPath
 
-    if (-not (Test-Path -Path $exportPath)) {
+    If (-not (Test-Path -Path $fullpath)) {
         New-Item -Path $exportPath -ItemType File | Out-Null
+        $points | Export-Csv -Path $exportPath -NoTypeInformation
+        Write-Host "Profile exported to $exportPath"
     }
-
-    $points | Export-Csv -Path $exportPath -NoTypeInformation
-    Write-Host "Profile exported to $exportPath"
+    else {
+        $overwrite = Read-Host "File already exists at $fullpath. Overwrite? (Y/N)"
+        If ($overwrite -eq "Y" -or $overwrite -eq "y") {
+            $points | Export-Csv -Path $exportPath -NoTypeInformation
+            Write-Host "Profile exported to $exportPath"
+        }
+        else {
+            Write-Host "Export cancelled."
+            return
+        }
+    }
 }
 function Show-AsciiSketch {
     [CmdletBinding()]
@@ -276,16 +287,24 @@ bellows();
 //translate ([3*intRadiusBot,0,0]) bellows(270);  
 "@
 
+    $fullpath = Join-Path -Path (Get-Location) -ChildPath $exportPath
 
-    If (-not (Test-Path -Path $exportPath)) {
+    If (-not (Test-Path -Path $fullpath)) {
         New-Item -Path $exportPath -ItemType File | Out-Null
-        $fullpath = Resolve-Path -Path $exportPath
+        Set-Content -Path $fullpath -Value $scadCode -Force
+        Write-Host "SCAD code exported to $fullpath"
     }
     else {
-        throw "File $exportPath already exists. Please delete or choose a different path."
+        $overwrite = Read-Host "File already exists at $fullpath. Overwrite? (Y/N)"
+        If ($overwrite -eq "Y" -or $overwrite -eq "y") {
+            Set-Content -Path $fullpath -Value $scadCode -Force
+            Write-Host "SCAD code exported to $fullpath"
+        }
+        else {
+            Write-Host "Export cancelled."
+            return
+        }
     }
-    Set-Content -Path $fullpath -Value $scadCode
-    Write-Host "SCAD code exported to $fullpath"
 }
 #endregion
 
@@ -327,4 +346,3 @@ else {
     Write-Error "No points generated for the bellow profile."
 }
 #endregion
-
