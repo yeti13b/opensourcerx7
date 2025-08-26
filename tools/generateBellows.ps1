@@ -204,15 +204,14 @@ function Export-BellowProfile {
         [array]$points,
         [string]$exportPath
     )
-    $fullpath = Join-Path -Path (Get-Location) -ChildPath $exportPath
 
-    If (-not (Test-Path -Path $fullpath)) {
+    If (-not (Test-Path -Path $exportPath)) {
         New-Item -Path $exportPath -ItemType File | Out-Null
         $points | Export-Csv -Path $exportPath -NoTypeInformation
         Write-Host "Profile exported to $exportPath"
     }
     else {
-        $overwrite = Read-Host "File already exists at $fullpath. Overwrite? (Y/N)"
+        $overwrite = Read-Host "File already exists at $exportPath. Overwrite? (Y/N)"
         If ($overwrite -eq "Y" -or $overwrite -eq "y") {
             $points | Export-Csv -Path $exportPath -NoTypeInformation
             Write-Host "Profile exported to $exportPath"
@@ -323,18 +322,16 @@ bellows();
 //translate ([3*intRadiusBot,0,0]) bellows(270);  
 "@
 
-    $fullpath = Join-Path -Path (Get-Location) -ChildPath $exportPath
-
-    If (-not (Test-Path -Path $fullpath)) {
+    If (-not (Test-Path -Path $exportPath)) {
         New-Item -Path $exportPath -ItemType File | Out-Null
-        Set-Content -Path $fullpath -Value $scadCode -Force
-        Write-Host "SCAD code exported to $fullpath"
+        Set-Content -Path $exportPath -Value $scadCode -Force
+        Write-Host "SCAD code exported to $exportPath"
     }
     else {
-        $overwrite = Read-Host "File already exists at $fullpath. Overwrite? (Y/N)"
+        $overwrite = Read-Host "File already exists at $exportPath. Overwrite? (Y/N)"
         If ($overwrite -eq "Y" -or $overwrite -eq "y") {
-            Set-Content -Path $fullpath -Value $scadCode -Force
-            Write-Host "SCAD code exported to $fullpath"
+            Set-Content -Path $exportPath -Value $scadCode -Force
+            Write-Host "SCAD code exported to $exportPath"
         }
         else {
             Write-Host "Export cancelled."
