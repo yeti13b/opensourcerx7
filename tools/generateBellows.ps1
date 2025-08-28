@@ -95,19 +95,6 @@ function New-BellowProfile {
     $usable_radius = [double]($bottom_radius - $min_bellow_radius)
     if ($usable_height -le 0) { throw "total_height must be > 2*offset." }
 
-    <#
-    # Half-step count (force odd so we END on a Shrink)
-    $M = [int][math]::Floor($usable_height / $min_step_height)
-    if ($M -lt 1) { throw "Not enough room for any corrugation half-steps." }
-    if (($M % 2) -eq 0) { $M -= 1 }   # make it odd to finish on Shrink
-    if ($M -lt 1) { $M = 1 }
-
-    # Step sizes
-    $deltaH = $usable_height / $M
-    # For a ±45° (or steeper) look, use amplitude around the baseline near ΔH
-    $amplitude = $deltaH * $amplitudeFactor # amplitude of corrugation, can be adjusted for more/less steepness
-    #>
-
     # Step heights: Shrink is 2× Grow
     $growH = $min_step_height
     $shrinkH = 2 * $min_step_height
@@ -130,7 +117,6 @@ function New-BellowProfile {
     $private:points = @()
     function Add-Point([string]$Step, [double]$Radius, [double]$Height) {
         if ($Radius -lt $min_bellow_radius) { $Radius = $min_bellow_radius }
-        #if ($Radius -gt $bottom_radius) { $Radius = $bottom_radius }
         $private:points += [PSCustomObject]@{
             Radius = [math]::Round($Radius, $decimals)
             Height = [math]::Round($Height, 0)
@@ -281,9 +267,7 @@ height          = $total_height;  // overall height
 
 bellowsIntPts = [   // internal points of the bellow shape
     [0,     height],
-    [intRadiusTop,   height],
-    $($points -join "`r`n    ")
-    [intRadiusBot,   0], 
+    $($points -join "`r`n    ") 
     [0,     0]
 ];
         
