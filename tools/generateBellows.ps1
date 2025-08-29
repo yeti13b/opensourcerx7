@@ -36,6 +36,7 @@
     Written by Yeti13b
     https://github.com/yeti13b
 #>
+#Requires -PSEdition Core
 
 param (
     [double]$top_radius = 7.5,          # Top radius of the bellow
